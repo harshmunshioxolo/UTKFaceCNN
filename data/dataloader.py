@@ -63,6 +63,35 @@ class UTKDataset(Dataset):
         assert(len(self.images)==len(self.gender))
         assert(len(self.images)==len(self.race))
         print(">>> Assertion Passed <<<")
+
+        # Normalise the age
+        self.age = self.normalization(self.age)
+    
+    def normalization(self, age: list) -> list:
+        """normalization of the age data to bring it in between 0 and 1.
+
+        Args:
+            age (list): list of age params
+
+        Returns:
+            list: returns normalized age
+        """
+        self.min_age = min(age)
+        self.max_age = max(age)
+        normalized = [(x - self.min_age) / (self.max_age - self.min_age) for x in age]
+        return normalized
+
+    @staticmethod
+    def unnormalize(age:float) -> float:
+        """Unnormalize the age (given normalized age)
+
+        Args:
+            age (float): Age generated from the neural network
+
+        Returns:
+            float: Unnormalized age
+        """
+        return age * (self.max_age - self.min_age) + self.min_age
     
     def __len__(self) -> int:
         return len(self.images)
@@ -75,6 +104,7 @@ class UTKDataset(Dataset):
         #1. Transpose the image into (R,G,B) format and convert it to tensor
         # image = image.transpose((2, 0, 1))
         image = transforms.ToTensor()(image)
+        image = image.float()
 
         #2. Read the age gender race at the index
         gender = self.gender[index]
@@ -86,7 +116,7 @@ class UTKDataset(Dataset):
         return {"image": image, "age": age,  "gender": gender, "race": race}
 
 if __name__=="__main__":
-    utkdataset = UTKDataset(root_dir="/scratch/hmunsh2s")
+    utkdataset = UTKDataset(root_dir="/home/harsh/Documents/github_projects/face_data")
     utkloader = DataLoader(utkdataset, batch_size=4, shuffle=True, num_workers=4)
     for i, data in enumerate(utkloader):
         print(data['image'].shape)
