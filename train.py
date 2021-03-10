@@ -25,7 +25,9 @@ if __name__ == "__main__":
     net.to(device=device)
 
     # 2a. Define the dataloader
-    utkdataset = UTKDataset(root_dir="/home/harsh/Documents/github_projects/face_data")
+    utkdataset = UTKDataset(
+        root_dir="/data/harsh/Documents/Experiments/pytorch_cpp/face_data"
+    )
     val_data = int(len(utkdataset) * 0.2)
     train_data_len = len(utkdataset) - val_data
 
@@ -33,7 +35,7 @@ if __name__ == "__main__":
     train_data, test_data = random_split(utkdataset, [train_data_len, val_data])
     train_loader, val_loader = (
         DataLoader(train_data, batch_size=16, shuffle=True, num_workers=4),
-        DataLoader(val_data, batch_size=1, shuffle=False, num_workers=4),
+        DataLoader(test_data, batch_size=1, shuffle=False, num_workers=4),
     )
 
     # 3. Identify the loss functions
@@ -55,8 +57,7 @@ if __name__ == "__main__":
 
     # 5. Setup the net to train
     net.train()
-    for epoch in tqdm(range(50)):
-        print(epoch)
+    for epoch in tqdm(range(10)):
         for i, data in tqdm(enumerate(train_loader)):
             inputs = data["image"].to(device=device)
             age_label = data["age"].to(device=device)
@@ -72,34 +73,40 @@ if __name__ == "__main__":
             )
             loss_3 = criterion_3(outputs[:, 6], age_label.float())
             loss = loss_1 + loss_2 + loss_3
-            writer.add_scalar('Loss/Ethnicity', loss_1.item(), epoch*train_data_len+i)
-            writer.add_scalar('Loss/Gender', loss_2.item(), epoch*train_data_len+i)
-            writer.add_scalar('Loss/Age', loss_3.item(), epoch*train_data_len+i)
-            writer.add_scalar('Loss/total_loss', loss.item(), epoch*train_data_len+i)
+            writer.add_scalar(
+                "Loss/Ethnicity", loss_1.item(), epoch * train_data_len + i
+            )
+            writer.add_scalar("Loss/Gender", loss_2.item(), epoch * train_data_len + i)
+            writer.add_scalar("Loss/Age", loss_3.item(), epoch * train_data_len + i)
+            writer.add_scalar(
+                "Loss/total_loss", loss.item(), epoch * train_data_len + i
+            )
             loss.backward()
             optimizer.step()
 
-            # enter validation at evey 5 epochs
-            if epoch+1 % 5 == 0:
-                # save the model
-                for j, data in tqdm(enumerate(val_loader)):
-                    inputs = data["image"].to(device=device)
-                    age_label = data["age"].to(device=device)
-                    gender_label = data["gender"].to(device=device)
-                    race_label = data["race"].to(device=device)
+        # enter validation at evey 2 epochs
+        if (epoch + 1) % 2 == 0:
+            torch.save(net.state_dict(), "./checkpoints/UTKFaceCNN_" + str(epoch+1) +".pth")
+            print(">>>Validating<<<")
+            # save the model
+            for j, data in tqdm(enumerate(val_loader)):
+                inputs = data["image"].to(device=device)
+                age_label = data["age"].to(device=device)
+                gender_label = data["gender"].to(device=device)
+                race_label = data["race"].to(device=device)
 
-                    output = net(input)
+                output = net(inputs)
 
-                    loss_1 = criterion_1(outputs[:, 0:5], race_label)
-                    loss_2 = criterion_2(
-                        sig(outputs[:, 5:6]), gender_label.unsqueeze(1).float()
-                    )
-                    loss_3 = criterion_3(outputs[:, 6], age_label.float())
-                    loss = loss_1 + loss_2 + loss_3
-                    writer.add_scalar('Val/Ethnicity', loss_1.item(), j)
-                    writer.add_scalar('Val/Gender', loss_2.item(), j)
-                    writer.add_scalar('Val/Age', loss_3.item(), j)
-                    writer.add_scalar('Val/total_loss', loss.item(), j)
+                loss_1 = criterion_1(outputs[:, 0:5], race_label)
+                loss_2 = criterion_2(
+                    sig(outputs[:, 5:6]), gender_label.unsqueeze(1).float()
+                )
+                loss_3 = criterion_3(outputs[:, 6], age_label.float())
+                loss = loss_1 + loss_2 + loss_3
+                writer.add_scalar("Val/Ethnicity", loss_1.item(), j)
+                writer.add_scalar("Val/Gender", loss_2.item(), j)
+                writer.add_scalar("Val/Age", loss_3.item(), j)
+                writer.add_scalar("Val/total_loss", loss.item(), j)
 
     PATH = "./UTKFaceCNN.pth"
     torch.save(net.state_dict(), PATH)

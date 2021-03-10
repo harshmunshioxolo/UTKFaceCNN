@@ -11,14 +11,14 @@ from tqdm import tqdm
 
 
 class UTKDataset(Dataset):
-    def __init__(self, root_dir:str, transform=None) -> None:
+    def __init__(self, root_dir: str, transform=None) -> None:
         """DataLoader for the UTK Face dataset
 
         Summary:
             The dataset is given on kaggle, link: https://www.kaggle.com/jangedoo/utkface-new
             The dataset is in the form of cropped (and aligned) images. In case one wants to use the base image
                 it can be used too. The facial landmarks are also given for the face alignment.
-            
+
             NOTE: This dataset assumes input images as aligned.
                   The image files are named [age]_[gender]_[race]_[date&time].jpg
                   * [age] is an integer from 0-116
@@ -34,7 +34,9 @@ class UTKDataset(Dataset):
             raise TypeError("Expected root_dir to be of type str!")
 
         self.root_dir = root_dir
-        self.cropped_data_dir = str(Path(root_dir) / "utkface_aligned_cropped" / "UTKFace")
+        self.cropped_data_dir = str(
+            Path(root_dir) / "utkface_aligned_cropped" / "UTKFace"
+        )
         self.images = []
         self.age = []
         self.gender = []
@@ -45,7 +47,7 @@ class UTKDataset(Dataset):
         for image in tqdm(image_list):
             # 0. Read and append the images
             self.images.append(np.array(Image.open(image)))
-        
+
             # 1. extract the age, gender and race of that particular image
             image_metadata = image.split("/")[-1].split("_")
             try:
@@ -60,14 +62,14 @@ class UTKDataset(Dataset):
                 self.images.pop()
 
         # mandatory checks
-        assert(len(self.images)==len(self.age))
-        assert(len(self.images)==len(self.gender))
-        assert(len(self.images)==len(self.race))
+        assert len(self.images) == len(self.age)
+        assert len(self.images) == len(self.gender)
+        assert len(self.images) == len(self.race)
         print(">>> Assertion Passed <<<")
 
         # Normalise the age
         self.age = self.normalization(self.age)
-    
+
     def normalization(self, age: list) -> list:
         """normalization of the age data to bring it in between 0 and 1.
 
@@ -82,8 +84,7 @@ class UTKDataset(Dataset):
         normalized = [(x - self.min_age) / (self.max_age - self.min_age) for x in age]
         return normalized
 
-    @staticmethod
-    def unnormalize(age:float) -> float:
+    def unnormalize(self, age: float) -> float:
         """Unnormalize the age (given normalized age)
 
         Args:
@@ -93,35 +94,35 @@ class UTKDataset(Dataset):
             float: Unnormalized age
         """
         return age * (self.max_age - self.min_age) + self.min_age
-    
+
     def __len__(self) -> int:
         return len(self.images)
-    
+
     def __getitem__(self, index) -> dict:
-        #0. Fetch the image from the list and normalize it
+        # 0. Fetch the image from the list and normalize it
         image = self.images[index]
         image = image / 255.0
 
-        #1. Transpose the image into (R,G,B) format and convert it to tensor
+        # 1. Transpose the image into (R,G,B) format and convert it to tensor
         # image = image.transpose((2, 0, 1))
         image = transforms.ToTensor()(image)
         image = image.float()
 
-        #2. Read the age gender race at the index
+        # 2. Read the age gender race at the index
         gender = self.gender[index]
         # age = torch.Tensor(self.age[index])
         age = self.age[index]
         race = self.race[index]
-        
 
-        return {"image": image, "age": age,  "gender": gender, "race": race}
+        return {"image": image, "age": age, "gender": gender, "race": race}
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     utkdataset = UTKDataset(root_dir="/home/harsh/Documents/github_projects/face_data")
     utkloader = DataLoader(utkdataset, batch_size=4, shuffle=True, num_workers=4)
     for i, data in enumerate(utkloader):
-        print(data['image'].shape)
-        print(data['age'])
-        print(data['gender'])
-        print(data['race'])
+        print(data["image"].shape)
+        print(data["age"])
+        print(data["gender"])
+        print(data["race"])
         break
