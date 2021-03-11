@@ -1,12 +1,13 @@
-import cv2
-import torch
-import torchvision.transforms as transforms
-from torch.utils.data import Dataset, DataLoader
 from glob import glob
 from pathlib import Path
-from tqdm import tqdm
+
+import cv2
 import numpy as np
+import torch
+import torchvision.transforms as transforms
 from PIL import Image
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
 
 class UTKDataset(Dataset):
