@@ -95,7 +95,7 @@ if __name__ == "__main__":
                 gender_label = data["gender"].to(device=device)
                 race_label = data["race"].to(device=device)
 
-                output = net(inputs)
+                outputs = net(inputs)
 
                 loss_1 = criterion_1(outputs[:, 0:5], race_label)
                 loss_2 = criterion_2(
